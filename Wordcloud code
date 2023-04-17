@@ -1,5 +1,6 @@
 !pip install lxml
 !pip install wordcloud
+!pip install nltk
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
@@ -7,8 +8,6 @@ from wordcloud import WordCloud
 from bs4 import BeautifulSoup
 import nltk
 import string
-nltk.download('omw-1.4')
-nltk.download('punkt')
 nltk.download('stopwords')
 nltk.download('wordnet')
 
@@ -24,6 +23,8 @@ data.columns = ['type', 'posts']
 
     
 group_data = data.groupby('type')
+
+n=10
 
 mbti_types = ['estj', 'entj', 'esfj', 'enfj', 
               'istj', 'isfj', 'intj', 'infj',
@@ -57,25 +58,6 @@ def text_prep(txt):
         tokens = ["EMPTYSTRING"]
     return(tokens)
 
-# Transforming a groupby object for ENTJ personality type to a list of words in order to use the FreqDist command
-ENTJ = pd.Series(' '.join(group_data['posts'].get_group('ENTJ')).lower().split()).to_string(index = False)
-ENTJ = text_prep(ENTJ)
-
-
-# WORDCLOUD CONSISTING OF 10 FREQUENTLY USED WORDS - Individual code
-#ENTJ_str = ' '.join(ENTJ)
-#wordcloud_ENTJ = WordCloud(collocations = False, background_color = 'white').generate(ENTJ_str)
-#plt.imshow(wordcloud_ENTJ, interpolation='bilinear')
-#plt.axis("off")
-#plt.show()
-
-
-# BAR CHARTS SHOWING 10 FREQUENTLY USED WORDS BY EACH PERSONALITY TYPE - Individual code
-#post_dict = wordcloud_ENTJ.process_text(ENTJ_str)
-#word_freq={k: v for k, v in sorted(post_dict.items(),reverse=True, key=lambda item: item[1])}
-#dist = pd.DataFrame(list(word_freq.items())[:10])
-#dist.columns = ["Words", "Count"]
-#dist.plot.bar(x='Words', y='Count', figsize=(12,4))
 
 # To make a for loop that iterates over each persoanlity type and create a list of words
 i=0
@@ -93,5 +75,5 @@ while i < 16:
         word_freq={k: v for k, v in sorted(post_dict.items(),reverse=True, key=lambda item: item[1])}
         dist = pd.DataFrame(list(word_freq.items())[:10])
         dist.columns = ["Words", "Count"]
-        plt.subplots_adjust(hspace=0.5,  wspace=0.5)
+        dist.plot.bar(x="Words", y="Count", figsize=(12, 4))
         i+=1

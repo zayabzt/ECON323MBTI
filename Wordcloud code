@@ -60,24 +60,21 @@ def text_prep(txt):
 
 
 # To make a for loop that iterates over each persoanlity type and create a list of words
-i=0
-while i < 16:
-    for t in mbti:
-        group = pd.Series(' '.join(group_data['posts'].get_group(f"{t}")).lower().split()).to_string(index = False)
-        group = text_prep(group)
-        group_str = ' '.join(group)
-        wordcloud = WordCloud(collocations = False, background_color = 'white').generate(group_str)
-        plt.imshow(wordcloud, interpolation='bilinear')
-        plt.title(t)
-        plt.axis("off")
-        plt.tight_layout()
-        post_dict = wordcloud.process_text(group_str)
-        word_freq={y: s for y, s in sorted(post_dict.items(),reverse=True, key=lambda item: item[1])}
-        dist = pd.DataFrame(list(word_freq.items())[:10])
-        dist.columns = ["Words", "Count"]
-        dist.plot.bar(x="Words", y="Count", figsize=(8, 4), title=t)
-        plt.subplots_adjust(hspace=0.5,  wspace=0.5)
-        plt.show()
-        i+=1
+for t in mbti:
+    group = pd.Series(' '.join(group_data['posts'].get_group(f"{t}")).lower().split()).to_string(index = False)
+    group = text_prep(group)
+    group_str = ' '.join(group)
+    wordcloud = WordCloud(collocations = False, background_color = 'white').generate(group_str)
+    plt.imshow(wordcloud, interpolation='bilinear')
+    plt.title(t)
+    plt.axis("off")
+    plt.tight_layout()
+    post_dict = wordcloud.process_text(group_str)
+    word_freq={y: s for y, s in sorted(post_dict.items(),reverse=True, key=lambda item: item[1])}
+    dist = pd.DataFrame(list(word_freq.items())[:10])
+    dist.columns = ["Words", "Count"]
+    dist.plot.bar(x="Words", y="Count", figsize=(8, 4), title=t)
+    plt.subplots_adjust(hspace=0.5,  wspace=0.5)
+    plt.show()
 
 

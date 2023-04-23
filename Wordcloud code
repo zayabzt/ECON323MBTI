@@ -1,80 +1,93 @@
-!pip install lxml
-!pip install wordcloud
-!pip install nltk
+import random
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
-from wordcloud import WordCloud
+import matplotlib.gridspec as gridspec
+%matplotlib inline
+
+import seaborn as sns
+
+from sklearn import (linear_model, metrics, neural_network, pipeline, preprocessing, model_selection)
+
 from bs4 import BeautifulSoup
 import nltk
 import string
+from nltk.tokenize import RegexpTokenizer
+from nltk.tokenize import word_tokenize
 nltk.download('stopwords')
 nltk.download('wordnet')
 
+from wordcloud import WordCloud
 
 types = pd.read_csv("MBTI_type.csv")
 posts = pd.read_csv("MBTI_posts.csv")
 
+def shift(row):
+    row = row.dropna()
+    row = pd.Series(row.values)
+    return row
+
+
+def shift(row):
+    row = row.dropna()
+    row = pd.Series(row.values)
+    return row
+
 sep_posts = posts['posts'].str.split("\|\|\|", expand = True)
-sample_posts = pd.DataFrame(sep_posts[0])
+sep_posts = sep_posts.apply(lambda x: x.str.strip()).replace('', np.nan).dropna(how='all', axis=1)
+sep_posts2 = sep_posts.apply(shift, axis = 1)
 
-data = pd.concat([types, sample_posts], axis=1)
-data.columns = ['type', 'posts']
+def remove_first_apostrophe(s):
+    if s[0] == "'":
+        post = s[1:]
+    else:
+        post = s
+    return post
 
-    
-group_data = data.groupby('type')
+sep_posts2[0] = sep_posts2[0].apply(remove_first_apostrophe)
+sep_posts2.iloc[:, -1] = sep_posts2.iloc[:, -1].apply(lambda x: x[:-1] if isinstance(x, str) else x)
 
-n=10
-
-mbti_types = ['estj', 'entj', 'esfj', 'enfj', 
-              'istj', 'isfj', 'intj', 'infj',
-              'estp', 'entp', 'esfp', 'enfp', 
-              'istp', 'intp', 'isfp', 'infp']
-
-mbti=[]
-for x in mbti_types:
-    l = x.upper()
-    mbti += [l]
-
-# BAR CHART FOR 10 FREQUENTLY USED WORDS 
-
-# Remove stopwords using the 'english' library which includes words such as (the, a, an, is, to)
-stopwords = set(nltk.corpus.stopwords.words('english'))
-stopwords = stopwords.union(set(string.punctuation))
-
-# Remove Lemmatize words
-wnl = nltk.WordNetLemmatizer()
-
-# Defining a function that cleans, tokenizes, removes stopwords, and lemmatizes words in a text
-def text_prep(txt):
-    soup = BeautifulSoup(txt, "lxml")
-    [s.extract() for s in soup('style')]
-    txt=soup.text
-    txt = txt.lower()
-    tokens = [token for token in nltk.tokenize.word_tokenize(txt)]
-    tokens = [token for token in tokens if not token in stopwords]
-    tokens = [wnl.lemmatize(token) for token in tokens]
-    if (len(tokens)==0):
-        tokens = ["EMPTYSTRING"]
-    return(tokens)
+data = pd.concat([types, sep_posts2], axis=1)
+columns = range(0, 59)
+data_wc = data.copy()
+data_wc['posts'] = data_wc[columns].stack().groupby(level=0).agg(' '.join)
+data_wc.drop(columns, axis=1) 
 
 
-# To make a for loop that iterates over each persoanlity type and create a list of words
-for t in mbti:
-    group = pd.Series(' '.join(group_data['posts'].get_group(f"{t}")).lower().split()).to_string(index = False)
-    group = text_prep(group)
-    group_str = ' '.join(group)
-    wordcloud = WordCloud(collocations = False, background_color = 'white').generate(group_str)
+data_wc['Favourite World'] = data_wc['type'].apply(lambda x: 'Extrovert' if x[0] == 'E' else 'Introvert')
+data_wc['Information'] = data_wc['type'].apply(lambda x: 'Intuitive' if x[1] == 'N' else 'Sensing')
+data_wc['Decisions'] = data_wc['type'].apply(lambda x: 'Thinking' if x[2] == 'T' else 'Feeling')
+data_wc['Structure'] = data_wc['type'].apply(lambda x: 'Judging' if x[3] == 'J' else 'Perceiving')
+
+
+def gen_wc(posts, title):
+    wordcloud = WordCloud(background_color='white').generate(posts)
     plt.imshow(wordcloud, interpolation='bilinear')
-    plt.title(t)
-    plt.axis("off")
-    plt.tight_layout()
-    post_dict = wordcloud.process_text(group_str)
-    word_freq={y: s for y, s in sorted(post_dict.items(),reverse=True, key=lambda item: item[1])}
-    dist = pd.DataFrame(list(word_freq.items())[:10])
-    dist.columns = ["Words", "Count"]
-    dist.plot.bar(x="Words", y="Count", figsize=(8, 4), title=t)
-    plt.subplots_adjust(hspace=0.5,  wspace=0.5)
+    plt.axis('off')
+    plt.title(title)
     plt.show()
 
+E_I = data_wc.groupby('Favourite World')['posts'].apply(' '.join).reset_index()
+N_S = data_wc.groupby('Information')['posts'].apply(' '.join).reset_index()
+T_F = data_wc.groupby('Decisions')['posts'].apply(' '.join).reset_index()
+J_P = data_wc.groupby('Structure')['posts'].apply(' '.join).reset_index()
+
+
+# Wordcloud for each group 
+for i, title in enumerate(E_I['Favourite World']):
+    posts = E_I.iloc[i,1]
+    gen_wc(posts, title)
+
+for i, title in enumerate(N_S['Information']):
+    posts = N_S.iloc[i,1]
+    gen_wc(posts, title)
+
+for i, title in enumerate(T_F['Decisions']):
+    posts = T_F.iloc[i,1]
+    gen_wc(posts, title)
+
+
+for i, title in enumerate(J_P['Structure']):
+    posts = J_P.iloc[i,1]
+    gen_wc(posts, title)
 

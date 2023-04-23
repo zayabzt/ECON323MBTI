@@ -1,0 +1,86 @@
+!pip install lxml
+!pip install wordcloud
+!pip install nltk
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+from wordcloud import WordCloud
+from bs4 import BeautifulSoup
+import nltk
+import string
+nltk.download('stopwords')
+nltk.download('wordnet')
+
+
+types = pd.read_csv("MBTI_type.csv")
+posts = pd.read_csv("MBTI_posts.csv")
+
+sep_posts = posts['posts'].str.split("\|\|\|", expand = True)
+sample_posts = pd.DataFrame(sep_posts[0])
+
+data = pd.concat([types, sample_posts], axis=1)
+data.columns = ['type', 'posts']
+
+    
+group_data = data.groupby('type')
+
+n=10
+
+mbti_types = ['estj', 'entj', 'esfj', 'enfj', 
+              'istj', 'isfj', 'intj', 'infj',
+              'estp', 'entp', 'esfp', 'enfp', 
+              'istp', 'intp', 'isfp', 'infp']
+
+mbti=[]
+for x in mbti_types:
+    l = x.upper()
+    mbti += [l]
+
+# BAR CHART FOR 10 FREQUENTLY USED WORDS 
+
+# Remove stopwords using the 'english' library which includes words such as (the, a, an, is, to)
+stopwords = set(nltk.corpus.stopwords.words('english'))
+stopwords = stopwords.union(set(string.punctuation))
+
+# Remove Lemmatize words
+wnl = nltk.WordNetLemmatizer()
+
+# Defining a function that cleans, tokenizes, removes stopwords, and lemmatizes words in a text
+def text_prep(txt):
+    soup = BeautifulSoup(txt, "lxml")
+    [s.extract() for s in soup('style')]
+    txt=soup.text
+    txt = txt.lower()
+    tokens = [token for token in nltk.tokenize.word_tokenize(txt)]
+    tokens = [token for token in tokens if not token in stopwords]
+    tokens = [wnl.lemmatize(token) for token in tokens]
+    if (len(tokens)==0):
+        tokens = ["EMPTYSTRING"]
+    return(tokens)
+
+
+fig = plt.figure(figsize=(10, 60))
+spec = fig.add_gridspec(ncols=2, nrows=16)
+for i, t in enumerate(mbti):
+    ax0 = fig.add_subplot(spec[i, 0])
+    group = pd.Series(' '.join(group_data['posts'].get_group(f"{t}")).lower().split()).to_string(index = False)
+    group = text_prep(group)
+    group_str = ' '.join(group)
+    wordcloud = WordCloud(collocations = False, background_color = 'white').generate(group_str)
+    ax0.imshow(wordcloud, interpolation='bilinear')
+    plt.axis("off")
+
+    ax1 = fig.add_subplot(spec[i, 1])
+    post_dict = wordcloud.process_text(group_str)
+    word_freq={y: s for y, s in sorted(post_dict.items(),reverse=True, key=lambda item: item[1])}
+    dist = pd.DataFrame(list(word_freq.items())[:10])
+    dist.columns = ["Words", "Count"]
+    ax1.bar(x = dist["Words"], height = dist["Count"])
+    ax1.tick_params(axis='x', labelrotation = 45)
+    ax1.set_xlabel(f"Top 10 Most Used Words by {t} Types")
+    ax1.set_ylabel("Count")
+    plt.tight_layout()
+    plt.title(f"{t}", x = 0, y=1.05, fontsize = 15)
+    
+plt.show()
+

@@ -61,7 +61,7 @@ data_wc['Structure'] = data_wc['type'].apply(lambda x: 'Judging' if x[3] == 'J' 
 
 
 def gen_wc(posts, title):
-    wordcloud = WordCloud(background_color='white').generate(posts)
+    wordcloud = WordCloud(background_color='white', max_words=100).generate(posts)
     plt.imshow(wordcloud, interpolation='bilinear')
     plt.axis('off')
     plt.title(title)
